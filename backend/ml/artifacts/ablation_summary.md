@@ -4,7 +4,7 @@
 
 **Feature Set:** B: line_plus_context  
 **Variant:** uncalibrated  
-**Log Loss:** 0.612  
+**Log Loss:** 0.611  
 **ROC-AUC:** 0.722
 
 ## Key Findings
@@ -25,14 +25,14 @@
 
 | Feature Set | Variant | Accuracy | Log Loss | ROC-AUC |
 |------------|---------|----------|----------|---------|
-| B: line_plus_context | uncalibrated | 0.660 | 0.612 | 0.722 |
-| B: line_plus_context | sigmoid | 0.657 | 0.627 | 0.710 |
-| D: full_model | sigmoid | 0.649 | 0.639 | 0.688 |
-| D: full_model | uncalibrated | 0.645 | 0.646 | 0.698 |
-| A: line_only | uncalibrated | 0.605 | 0.654 | 0.655 |
-| C: line_plus_rolling_totals | uncalibrated | 0.606 | 0.660 | 0.650 |
-| A: line_only | sigmoid | 0.604 | 0.664 | 0.646 |
-| C: line_plus_rolling_totals | sigmoid | 0.599 | 0.665 | 0.644 |
+| B: line_plus_context | uncalibrated | 0.661 | 0.611 | 0.722 |
+| B: line_plus_context | sigmoid | 0.656 | 0.627 | 0.710 |
+| D: full_model | sigmoid | 0.653 | 0.639 | 0.688 |
+| D: full_model | uncalibrated | 0.648 | 0.647 | 0.697 |
+| A: line_only | uncalibrated | 0.605 | 0.654 | 0.656 |
+| C: line_plus_rolling_totals | uncalibrated | 0.604 | 0.659 | 0.650 |
+| A: line_only | sigmoid | 0.599 | 0.664 | 0.644 |
+| C: line_plus_rolling_totals | sigmoid | 0.595 | 0.665 | 0.642 |
 
 ## Conclusion
 

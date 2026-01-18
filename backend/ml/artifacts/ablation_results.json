@@ -3,64 +3,64 @@
     "feature_set": "A: line_only",
     "n_features": 2,
     "variant": "uncalibrated",
-    "accuracy": 0.6053412462908012,
-    "log_loss": 0.6544714686574986,
-    "roc_auc": 0.6554469738490447
+    "accuracy": 0.6048466864490604,
+    "log_loss": 0.654150884822614,
+    "roc_auc": 0.6557000394432532
   },
   {
     "feature_set": "A: line_only",
     "n_features": 2,
     "variant": "sigmoid",
-    "accuracy": 0.6038575667655787,
-    "log_loss": 0.6640077184221028,
-    "roc_auc": 0.6464614978077043
+    "accuracy": 0.599406528189911,
+    "log_loss": 0.6642274275954293,
+    "roc_auc": 0.6439639588498229
   },
   {
     "feature_set": "B: line_plus_context",
     "n_features": 7,
     "variant": "uncalibrated",
-    "accuracy": 0.6602373887240356,
-    "log_loss": 0.611740170364663,
-    "roc_auc": 0.7221138036329471
+    "accuracy": 0.6607319485657764,
+    "log_loss": 0.6114200428253929,
+    "roc_auc": 0.7224829478889051
   },
   {
     "feature_set": "B: line_plus_context",
     "n_features": 7,
     "variant": "sigmoid",
-    "accuracy": 0.6567754698318496,
-    "log_loss": 0.6274154740748312,
-    "roc_auc": 0.7102705136235514
+    "accuracy": 0.655786350148368,
+    "log_loss": 0.627470759226883,
+    "roc_auc": 0.7101371117947072
   },
   {
     "feature_set": "C: line_plus_rolling_totals",
     "n_features": 16,
     "variant": "uncalibrated",
-    "accuracy": 0.6063303659742829,
-    "log_loss": 0.6601347990104632,
-    "roc_auc": 0.6496280927027873
+    "accuracy": 0.6043521266073195,
+    "log_loss": 0.6593932083803512,
+    "roc_auc": 0.650064939450202
   },
   {
     "feature_set": "C: line_plus_rolling_totals",
     "n_features": 16,
     "variant": "sigmoid",
-    "accuracy": 0.5989119683481702,
-    "log_loss": 0.6648857741602187,
-    "roc_auc": 0.6436482148449735
+    "accuracy": 0.5954500494559841,
+    "log_loss": 0.6649545064671477,
+    "roc_auc": 0.6420529674930827
   },
   {
     "feature_set": "D: full_model",
     "n_features": 100,
     "variant": "uncalibrated",
-    "accuracy": 0.6449060336300693,
-    "log_loss": 0.6456606372415242,
-    "roc_auc": 0.6978967663639212
+    "accuracy": 0.6483679525222552,
+    "log_loss": 0.6466123403627367,
+    "roc_auc": 0.6971237744942111
   },
   {
     "feature_set": "D: full_model",
     "n_features": 100,
     "variant": "sigmoid",
-    "accuracy": 0.6488625123639961,
-    "log_loss": 0.6394085091794163,
-    "roc_auc": 0.6881420294393986
+    "accuracy": 0.6528189910979229,
+    "log_loss": 0.6390812419516765,
+    "roc_auc": 0.6878198647184506
   }
 ]

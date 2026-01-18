@@ -60,9 +60,19 @@ def rolling_features(df, team_id_col="team_id", windows=None):
     
     print(f"Computing rolling features with windows {windows}...")
     
-    # Ensure df is sorted by date
-    if not df["date"].is_monotonic_increasing:
-        df = df.sort_values("date").reset_index(drop=True)
+    # Task 3: Ensure df is sorted by GAME_DATE (chronological) within each TEAM_ID
+    # For leakage-safe rolling features, we need time-ordered data per team
+    if "date" in df.columns and team_id_col in df.columns:
+        # Sort by team_id, then date (ensuring chronological order per team)
+        df = df.sort_values([team_id_col, "date"], ascending=[True, True], na_position="last").reset_index(drop=True)
+        print(f"  Sorted by {team_id_col}, then date (chronological order per team)")
+    elif "date" in df.columns:
+        # Fallback: just sort by date if team_id missing
+        if not df["date"].is_monotonic_increasing:
+            df = df.sort_values("date", na_position="last").reset_index(drop=True)
+            print(f"  Sorted by date (no team_id column)")
+    else:
+        print(f"  WARNING: No 'date' column for chronological sorting")
     
     # Create a copy to avoid modifying original
     df = df.copy()

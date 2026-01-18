@@ -68,10 +68,25 @@ def load_events_df(collection_name=None, projection=None):
     # Build cursor with filter
     cursor = db[collection_name].find(query_filter, projection)
     
-    # Apply sort if specified
-    if ML_SORT_FIELD:
-        cursor = cursor.sort(ML_SORT_FIELD, ML_SORT_DIR)
-        print(f"  Using sort: {ML_SORT_FIELD} ({'ascending' if ML_SORT_DIR == 1 else 'descending'})")
+    # Task: Use GAME_DATE for sorting if available, otherwise fall back to GAME_ID
+    # Check if GAME_DATE exists in collection
+    sample_doc = db[collection_name].find_one(query_filter, {"GAME_DATE": 1})
+    has_gamedate = sample_doc and "GAME_DATE" in sample_doc and sample_doc.get("GAME_DATE") is not None
+    
+    if has_gamedate:
+        # Prefer GAME_DATE for sorting (time-ordered)
+        # Override if explicitly set via env var
+        if ML_SORT_FIELD and ML_SORT_FIELD != "GAME_ID":
+            sort_field = ML_SORT_FIELD
+        else:
+            sort_field = "GAME_DATE"
+    else:
+        # Fall back to GAME_ID if no GAME_DATE
+        sort_field = ML_SORT_FIELD if ML_SORT_FIELD else "GAME_ID"
+    
+    sort_dir = ML_SORT_DIR
+    cursor = cursor.sort(sort_field, sort_dir)
+    print(f"  Using sort: {sort_field} ({'ascending' if sort_dir == 1 else 'descending'})")
     
     # Apply limit if specified
     if ML_LIMIT:
@@ -208,21 +223,37 @@ def load_events_df(collection_name=None, projection=None):
             df["team_id"] = "UNKNOWN"
             print("  WARNING: No TEAM_ID field found, using 'UNKNOWN' for sorting")
 
-    # Task: Sort by [has_real_date desc, GAME_DATE asc, GAME_ID asc, TEAM_ID asc]
-    # This ensures rows with real dates come first, then sorted by GAME_DATE, then by GAME_ID for stable ordering
+    # Task: Sort by GAME_DATE when coverage is high (>=95%), otherwise use has_real_date priority
+    # Primary sort: GAME_DATE if coverage >= 95%, then GAME_ID for tie-breaking, then TEAM_ID
     sort_cols = []
-    if "has_real_date" in df.columns:
-        sort_cols.append("has_real_date")
-    if "date" in df.columns:
-        sort_cols.append("date")
-    if "game_id" in df.columns:
-        sort_cols.append("game_id")
-    if "team_id" in df.columns:
-        sort_cols.append("team_id")
+    ascending = []
+    
+    # Check GAME_DATE coverage
+    if "date" in df.columns and "has_real_date" in df.columns:
+        coverage_pct = (df["has_real_date"].sum() / len(df) * 100) if len(df) > 0 else 0
+        
+        if coverage_pct >= 95.0:
+            # High coverage: sort primarily by GAME_DATE
+            sort_cols = ["date", "game_id", "team_id"]
+            ascending = [True, True, True]  # All ascending
+            print(f"  Using GAME_DATE-based sorting (coverage: {coverage_pct:.1f}%)")
+        else:
+            # Low coverage: sort by has_real_date priority, then GAME_DATE, then GAME_ID
+            sort_cols = ["has_real_date", "date", "game_id", "team_id"]
+            ascending = [False, True, True, True]  # has_real_date descending, others ascending
+            print(f"  Using hybrid sorting (GAME_DATE coverage: {coverage_pct:.1f}%)")
+    else:
+        # Fallback: no date column, sort by GAME_ID
+        sort_cols = ["game_id"]
+        if "team_id" in df.columns:
+            sort_cols.append("team_id")
+        ascending = [True] * len(sort_cols)
+        print(f"  Using GAME_ID-based sorting (no GAME_DATE column)")
     
     if sort_cols:
-        # has_real_date: descending (1s first), others: ascending
-        ascending = [False if col == "has_real_date" else True for col in sort_cols]
+        # Filter out columns that don't exist
+        sort_cols = [col for col in sort_cols if col in df.columns]
+        ascending = ascending[:len(sort_cols)]
         df = df.sort_values(sort_cols, ascending=ascending, na_position="last").reset_index(drop=True)
 
     print(f"  Final DataFrame shape: {df.shape}")
@@ -237,6 +268,22 @@ def load_events_df(collection_name=None, projection=None):
             print(f"  Date range (rows with GAME_DATE): {min_date} to {max_date}")
     elif "date" in df.columns and df["date"].notna().sum() == 0:
         print(f"  Date ordering: GAME_ID-based (no real dates available)")
+    
+    # Task 4: Verify monotonic non-decreasing order by date
+    if "date" in df.columns:
+        # Check monotonicity (allowing NaT at end due to na_position="last")
+        non_null_dates = df["date"].dropna()
+        if len(non_null_dates) > 1:
+            is_monotonic = non_null_dates.is_monotonic_increasing
+            if not is_monotonic:
+                print(f"  ⚠️  WARNING: 'date' column is not monotonic non-decreasing after sorting")
+                # Show first violation
+                for i in range(len(non_null_dates) - 1):
+                    if non_null_dates.iloc[i] > non_null_dates.iloc[i + 1]:
+                        print(f"    Violation at index {non_null_dates.index[i]}: {non_null_dates.iloc[i]} > {non_null_dates.iloc[i + 1]}")
+                        break
+            else:
+                print(f"  ✓ Date column is monotonic non-decreasing")
 
     return df
 
