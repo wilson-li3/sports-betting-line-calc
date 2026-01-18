@@ -1,9 +1,25 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from app.db import db
 from app.analytics.ev_utils import american_to_implied_prob, compute_ev, compute_joint_ev
 import math
-from typing import Literal, Optional
+import json
+import csv
+import io
+import os
+from pathlib import Path
+from typing import Literal, Optional, List, Dict, Any
+
+# Import ML dashboard API functions
+try:
+    from app.ml_api import (
+        get_ml_metrics, get_predictions, get_calibration, get_ablation,
+        get_deciles, get_picks_summary, get_coefficients
+    )
+    ML_API_AVAILABLE = True
+except ImportError:
+    ML_API_AVAILABLE = False
 
 # Create FastAPI app instance
 app = FastAPI()
@@ -516,3 +532,69 @@ def get_recommendations_ev(
             "count": len(candidates),
         },
     }
+
+
+# ============================================================================
+# ML Dashboard API Endpoints
+# ============================================================================
+
+@app.get("/api/health")
+def api_health_check():
+    """Health check endpoint."""
+    return {"status": "ok", "service": "ml-dashboard"}
+
+
+@app.get("/api/metrics")
+def api_get_metrics():
+    """Get ML metrics from metrics.json."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_ml_metrics()
+
+
+@app.get("/api/predictions")
+def api_get_predictions(limit: int = Query(1000, ge=1, le=10000, description="Max rows to return")):
+    """Get predictions from predictions.csv as JSON."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_predictions(limit=limit)
+
+
+@app.get("/api/calibration")
+def api_get_calibration():
+    """Get calibration table from calibration.csv as JSON."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_calibration()
+
+
+@app.get("/api/ablation")
+def api_get_ablation():
+    """Get ablation results from ablation_results.json."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_ablation()
+
+
+@app.get("/api/deciles")
+def api_get_deciles():
+    """Get deciles analysis from picks_by_decile.csv as JSON."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_deciles()
+
+
+@app.get("/api/picks_summary")
+def api_get_picks_summary():
+    """Get picks summary from picks_summary.json."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_picks_summary()
+
+
+@app.get("/api/coefficients")
+def api_get_coefficients():
+    """Get model coefficients from coefficients.json."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_coefficients()

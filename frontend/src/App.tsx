@@ -1,9 +1,10 @@
 import { useState } from "react";
 import PairGraph from "./PairGraph";
 import GraphExplorer from "./GraphExplorer";
+import MLDashboard from "./MLDashboard";
 
 export default function App() {
-  const [view, setView] = useState<"pairs" | "graph">("pairs");
+  const [view, setView] = useState<"pairs" | "graph" | "ml">("ml");
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
@@ -48,11 +49,26 @@ export default function App() {
         >
           Graph Explorer
         </button>
+        <button
+          onClick={() => setView("ml")}
+          style={{
+            padding: "6px 12px",
+            border: "1px solid rgba(0,0,0,0.2)",
+            borderRadius: 4,
+            background: view === "ml" ? "#4A90E2" : "white",
+            color: view === "ml" ? "white" : "black",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: view === "ml" ? 600 : 400,
+          }}
+        >
+          ML Dashboard
+        </button>
       </div>
 
       {/* Content */}
       <div style={{ flex: 1, overflow: "hidden" }}>
-        {view === "pairs" ? <PairGraph /> : <GraphExplorer />}
+        {view === "pairs" ? <PairGraph /> : view === "graph" ? <GraphExplorer /> : <MLDashboard />}
       </div>
     </div>
   );

@@ -6,7 +6,11 @@ html, body, #root {
   height: 100%;
 }
 
-/* Prevent scrollbars */
+/* Prevent scrollbars for graph views, allow for ML dashboard */
 body {
-  overflow: hidden;
+  overflow: auto;
+}
+
+#root > div > div:last-child {
+  overflow-y: auto;
 }
