@@ -15,7 +15,7 @@ from typing import Literal, Optional, List, Dict, Any
 try:
     from app.ml_api import (
         get_ml_metrics, get_predictions, get_calibration, get_ablation,
-        get_deciles, get_picks_summary, get_coefficients
+        get_deciles, get_picks_summary, get_coefficients, get_timeframe, get_picks, get_future_games
     )
     ML_API_AVAILABLE = True
 except ImportError:
@@ -598,3 +598,48 @@ def api_get_coefficients():
     if not ML_API_AVAILABLE:
         raise HTTPException(status_code=503, detail="ML API not available")
     return get_coefficients()
+
+
+@app.get("/api/timeframe")
+def api_get_timeframe():
+    """Get timeframe (min/max date) from metrics or predictions."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_timeframe()
+
+
+@app.get("/api/picks")
+def api_get_picks(
+    limit: int = Query(100, ge=1, le=10000, description="Max picks to return"),
+    sort: str = Query("confidence", description="Sort by 'confidence' or 'date'"),
+    threshold: Optional[float] = Query(None, ge=0, le=0.5, description="Min confidence |p-0.5|"),
+    topk: Optional[int] = Query(None, ge=1, description="Return top K picks by confidence")
+):
+    """Get example picks from predictions.csv."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_picks(limit=limit, sort=sort, threshold=threshold, topk=topk)
+
+
+@app.get("/api/future_games")
+def api_get_future_games(
+    date_from: Optional[str] = Query(None, description="Filter from date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Filter to date (YYYY-MM-DD)"),
+    min_confidence: float = Query(0.0, ge=0, le=0.5, description="Min confidence |p-0.5|"),
+    limit: int = Query(100, ge=1, le=1000, description="Max games to return")
+):
+    """Get future games with model predictions."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_future_games(date_from=date_from, date_to=date_to, min_confidence=min_confidence, limit=limit)
+
+
+@app.get("/api/future_recommendations")
+def api_get_future_recommendations(
+    threshold: float = Query(0.15, ge=0, le=0.5, description="Min confidence threshold"),
+    limit: int = Query(50, ge=1, le=500, description="Max recommendations")
+):
+    """Get future game recommendations (high confidence picks only)."""
+    if not ML_API_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ML API not available")
+    return get_future_games(min_confidence=threshold, limit=limit)

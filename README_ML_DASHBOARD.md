@@ -4,6 +4,30 @@
 
 See `backend/ml/README_INTERPRETATION.md` for a comprehensive guide to understanding your ML pipeline outputs.
 
+## Quick Start
+
+### 1. Run Backend API
+
+```bash
+# From project root
+PYTHONPATH=./backend uvicorn app.main:app --reload --port 8000
+```
+
+### 2. Run Frontend
+
+```bash
+cd frontend
+npm install  # First time only
+npm run dev
+```
+
+### 3. Access Dashboard
+
+Open `http://localhost:5173` and navigate to:
+- **ML Dashboard**: Overall metrics, calibration, ablation
+- **Backtest Review**: Historical betting performance analysis
+- **Future Games**: Predictions for upcoming games
+
 **Quick Summary:**
 - You've built a leakage-safe ML pipeline for predicting NBA team total over/under outcomes
 - Current best model: `B: line_plus_context` (lines + context features like home/away, competitive, pace)

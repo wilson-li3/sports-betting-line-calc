@@ -384,11 +384,6 @@ export default function MLDashboard() {
           </p>
         )}
       </section>
-
-      <div className="warning-box">
-        <strong>⚠️ Important:</strong> All results are from backtesting on historical data only. This is not a profitability claim. 
-        Hypothetical EV calculations assume -110 odds and perfect execution.
-      </div>
     </div>
   );
 }
