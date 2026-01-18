@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 
 type PairStat = {
@@ -11,10 +12,16 @@ type PairStat = {
 type GraphNode = { id: string };
 type GraphLink = { source: string; target: string; lift: number; phi: number; n: number };
 
+// API response type
+type PairsResponse = {
+  pairs: PairStat[];
+};
+
 function toPretty(id: string) {
   return id.replace(/_HIT$/, "").replace(/_/g, " ");
 }
 
+// MOCK data kept as fallback
 const MOCK: PairStat[] = [
   { A: "TEAM_TOTAL_OVER_HIT", B: "PRIMARY_SCORER_PTS_OVER_HIT", n: 7, lift: 1.40, phi: 0.40 },
   { A: "TEAM_TOTAL_OVER_HIT", B: "PRIMARY_FACILITATOR_AST_OVER_HIT", n: 7, lift: 1.17, phi: 0.26 },
@@ -24,9 +31,40 @@ const MOCK: PairStat[] = [
 ];
 
 export default function PairGraph() {
-  // Build nodes/links from pair stats
+  // State to store fetched pair data, defaults to MOCK data as fallback
+  const [pairData, setPairData] = useState<PairStat[]>(MOCK);
+  // State to track data source: "LIVE" for backend data, "MOCK" for fallback
+  const [dataSource, setDataSource] = useState<"LIVE" | "MOCK">("MOCK");
+
+  // Fetch data from backend API on component mount
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/pairs")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch pairs");
+        }
+        return res.json();
+      })
+      .then((data: PairsResponse) => {
+        // If successful AND data.pairs exists with length > 0: use LIVE data
+        if (data.pairs && data.pairs.length > 0) {
+          setPairData(data.pairs);
+          setDataSource("LIVE");
+        } else {
+          // If data is empty, fall back to MOCK
+          setDataSource("MOCK");
+        }
+      })
+      .catch((err) => {
+        // If fetch fails, continue using MOCK data (already in state)
+        console.warn("Failed to fetch pairs from API, using MOCK data:", err);
+        setDataSource("MOCK");
+      });
+  }, []);
+
+  // Build nodes/links dynamically from pair data (fetched or MOCK)
   const nodeIds = new Set<string>();
-  const links: GraphLink[] = MOCK.map((p) => {
+  const links: GraphLink[] = pairData.map((p) => {
     nodeIds.add(p.A);
     nodeIds.add(p.B);
     return { source: p.A, target: p.B, lift: p.lift, phi: p.phi, n: p.n };
@@ -56,6 +94,23 @@ export default function PairGraph() {
     >
       <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
         Graph Legend
+      </div>
+
+      {/* Data source indicator badge */}
+      <div
+        style={{
+          display: "inline-block",
+          padding: "4px 8px",
+          borderRadius: 6,
+          fontSize: 11,
+          fontWeight: 600,
+          marginBottom: 8,
+          background: dataSource === "LIVE" ? "rgba(0, 150, 0, 0.15)" : "rgba(200, 140, 0, 0.15)",
+          color: dataSource === "LIVE" ? "rgba(0, 100, 0, 0.9)" : "rgba(140, 100, 0, 0.9)",
+          border: `1px solid ${dataSource === "LIVE" ? "rgba(0, 150, 0, 0.3)" : "rgba(200, 140, 0, 0.3)"}`,
+        }}
+      >
+        DATA: {dataSource}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
