@@ -55,7 +55,17 @@ def past_game_totals(before_game_id, n=ROLL_N):
     vals = list(totals.values())[:n]
     return list(reversed(vals))
 
-def build_events_for_game(game_id: str) -> int:
+def build_events_for_game(game_id: str, roll_n: int = None) -> int:
+    """
+    Build events for a game.
+    
+    Args:
+        game_id: The game ID
+        roll_n: Number of past games for rolling median (defaults to module ROLL_N if None)
+    """
+    if roll_n is None:
+        roll_n = ROLL_N
+    
     roles = list(db.roles_by_game.find({"GAME_ID": game_id}))
     if not roles:
         return 0
@@ -68,7 +78,7 @@ def build_events_for_game(game_id: str) -> int:
     game_total_actual = sum(to_num(t.get("PTS")) for t in teams)
 
     # synthetic game total line
-    totals_hist = past_game_totals(game_id, n=ROLL_N)
+    totals_hist = past_game_totals(game_id, n=roll_n)
     game_total_line = rolling_median(totals_hist)
     if game_total_line is None:
         return 0
@@ -84,7 +94,7 @@ def build_events_for_game(game_id: str) -> int:
             continue
 
         team_total_actual = to_num(team_doc.get("PTS"))
-        team_hist = get_team_last_values(team_id, game_id, "PTS", n=ROLL_N)
+        team_hist = get_team_last_values(team_id, game_id, "PTS", n=roll_n)
         team_total_line = rolling_median(team_hist)
         if team_total_line is None:
             continue
@@ -96,9 +106,9 @@ def build_events_for_game(game_id: str) -> int:
         pr = r["primary_rebounder"]
 
         # synthetic role-player lines
-        ps_line = rolling_median(get_player_last_values(ps["PLAYER_ID"], game_id, "PTS", n=ROLL_N))
-        pf_line = rolling_median(get_player_last_values(pf["PLAYER_ID"], game_id, "AST", n=ROLL_N))
-        pr_line = rolling_median(get_player_last_values(pr["PLAYER_ID"], game_id, "REB", n=ROLL_N))
+        ps_line = rolling_median(get_player_last_values(ps["PLAYER_ID"], game_id, "PTS", n=roll_n))
+        pf_line = rolling_median(get_player_last_values(pf["PLAYER_ID"], game_id, "AST", n=roll_n))
+        pr_line = rolling_median(get_player_last_values(pr["PLAYER_ID"], game_id, "REB", n=roll_n))
 
         if ps_line is None or pf_line is None or pr_line is None:
             continue
