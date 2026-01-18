@@ -1,0 +1,37 @@
+{
+  "coefficients": [
+    {
+      "feature": "pace_high",
+      "coefficient": 0.37901399473812847
+    },
+    {
+      "feature": "GAME_TOTAL_LINE",
+      "coefficient": 0.07599014300553746
+    },
+    {
+      "feature": "pace_mid",
+      "coefficient": -0.004735755357284546
+    },
+    {
+      "feature": "is_competitive",
+      "coefficient": -0.04190229142954266
+    },
+    {
+      "feature": "is_home",
+      "coefficient": -0.045453484638518435
+    },
+    {
+      "feature": "_intercept",
+      "coefficient": -0.04719540388845869
+    },
+    {
+      "feature": "pace_low",
+      "coefficient": -0.36863354881015387
+    },
+    {
+      "feature": "TEAM_TOTAL_LINE",
+      "coefficient": -0.7837074733113163
+    }
+  ],
+  "n_features": 8
+}

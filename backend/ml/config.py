@@ -47,3 +47,9 @@ ROLLING_WINDOWS = [5, 10]  # Can expand if needed
 # Task 1: LogisticRegression C parameter (default 0.1 for stronger regularization)
 LOGISTIC_C = float(os.getenv("ML_LOGISTIC_C", "0.1"))
 LOGISTIC_MAX_ITER = int(os.getenv("ML_LOGISTIC_MAX_ITER", "2000"))
+
+# Dataset expansion options (Task 2)
+ML_LIMIT = os.getenv("ML_LIMIT")  # None if not set
+ML_QUERY_JSON = os.getenv("ML_QUERY_JSON")  # None if not set
+ML_SORT_FIELD = os.getenv("ML_SORT_FIELD", "GAME_ID")
+ML_SORT_DIR = int(os.getenv("ML_SORT_DIR", "1"))  # 1 for ascending, -1 for descending

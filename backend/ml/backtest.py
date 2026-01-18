@@ -279,8 +279,9 @@ def walk_forward_backtest(df, feature_cols, label_col, min_train_size=None, test
     # else: keep uncalibrated (already in p_hat)
     
     # Task 1: Store selected model info in overall_metrics
+    # IMPORTANT: Copy best_metrics to avoid circular reference if best_metrics == overall_metrics
     overall_metrics["selected_model"] = best_name
-    overall_metrics["selected_model_metrics"] = best_metrics
+    overall_metrics["selected_model_metrics"] = best_metrics.copy() if isinstance(best_metrics, dict) else best_metrics
     
     # Use best model's calibration for main calibration_df
     overall_calibration = best_calibration

@@ -1,0 +1,210 @@
+{
+  "decile_analysis": [
+    {
+      "decile": 1,
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "count": 61,
+      "mean_pred": 0.10638049762079586,
+      "mean_true": 0.06557377049180328,
+      "calibration_diff": -0.04080672712899258
+    },
+    {
+      "decile": 2,
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "count": 181,
+      "mean_pred": 0.1916852619444202,
+      "mean_true": 0.17679558011049723,
+      "calibration_diff": -0.014889681833922974
+    },
+    {
+      "decile": 3,
+      "bin_low": 0.19999999999999998,
+      "bin_high": 0.3,
+      "count": 233,
+      "mean_pred": 0.27590523596440203,
+      "mean_true": 0.2832618025751073,
+      "calibration_diff": 0.007356566610705273
+    },
+    {
+      "decile": 4,
+      "bin_low": 0.30000000000000004,
+      "bin_high": 0.4,
+      "count": 322,
+      "mean_pred": 0.36694020422096696,
+      "mean_true": 0.4161490683229814,
+      "calibration_diff": 0.049208864102014416
+    },
+    {
+      "decile": 5,
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "count": 286,
+      "mean_pred": 0.4554786764229427,
+      "mean_true": 0.46503496503496505,
+      "calibration_diff": 0.009556288612022346
+    },
+    {
+      "decile": 6,
+      "bin_low": 0.5,
+      "bin_high": 0.6,
+      "count": 308,
+      "mean_pred": 0.5466680851701146,
+      "mean_true": 0.6103896103896104,
+      "calibration_diff": 0.06372152521949581
+    },
+    {
+      "decile": 7,
+      "bin_low": 0.6,
+      "bin_high": 0.7,
+      "count": 240,
+      "mean_pred": 0.6311683703809868,
+      "mean_true": 0.6,
+      "calibration_diff": -0.031168370380986854
+    },
+    {
+      "decile": 8,
+      "bin_low": 0.7000000000000001,
+      "bin_high": 0.8,
+      "count": 226,
+      "mean_pred": 0.7199263320440396,
+      "mean_true": 0.6592920353982301,
+      "calibration_diff": -0.06063429664580944
+    },
+    {
+      "decile": 9,
+      "bin_low": 0.8,
+      "bin_high": 0.9,
+      "count": 134,
+      "mean_pred": 0.8080383646124685,
+      "mean_true": 0.8656716417910447,
+      "calibration_diff": 0.05763327717857625
+    },
+    {
+      "decile": 10,
+      "bin_low": 0.9,
+      "bin_high": 1.0,
+      "count": 31,
+      "mean_pred": 0.8920407094179178,
+      "mean_true": 0.8387096774193549,
+      "calibration_diff": -0.05333103199856293
+    }
+  ],
+  "threshold_policy": [
+    {
+      "threshold": 0.55,
+      "num_picks": 1685,
+      "hit_rate": 0.685459940652819,
+      "hit_rate_ci_lower": 0.6632893552736389,
+      "hit_rate_ci_upper": 0.7076305260319992,
+      "over_pick_count": 764,
+      "over_hit_rate": 0.6819371727748691,
+      "over_hit_rate_ci_lower": 0.6489131441840266,
+      "over_hit_rate_ci_upper": 0.7149612013657116,
+      "under_pick_count": 921,
+      "under_hit_rate": 0.6883821932681867,
+      "under_hit_rate_ci_lower": 0.6584702779231631,
+      "under_hit_rate_ci_upper": 0.7182941086132103
+    },
+    {
+      "threshold": 0.6,
+      "num_picks": 1363,
+      "hit_rate": 0.7043286867204696,
+      "hit_rate_ci_lower": 0.6801020879460171,
+      "hit_rate_ci_upper": 0.728555285494922,
+      "over_pick_count": 605,
+      "over_hit_rate": 0.6909090909090909,
+      "over_hit_rate_ci_lower": 0.6540856834779892,
+      "over_hit_rate_ci_upper": 0.7277324983401926,
+      "under_pick_count": 758,
+      "under_hit_rate": 0.7150395778364116,
+      "under_hit_rate_ci_lower": 0.6829051329927858,
+      "under_hit_rate_ci_upper": 0.7471740226800374
+    },
+    {
+      "threshold": 0.65,
+      "num_picks": 1029,
+      "hit_rate": 0.7473275024295433,
+      "hit_rate_ci_lower": 0.7207768698511956,
+      "hit_rate_ci_upper": 0.7738781350078909,
+      "over_pick_count": 454,
+      "over_hit_rate": 0.7290748898678414,
+      "over_hit_rate_ci_lower": 0.6881930093757278,
+      "over_hit_rate_ci_upper": 0.769956770359955,
+      "under_pick_count": 575,
+      "under_hit_rate": 0.7617391304347826,
+      "under_hit_rate_ci_lower": 0.7269179361096351,
+      "under_hit_rate_ci_upper": 0.7965603247599301
+    },
+    {
+      "threshold": 0.7,
+      "num_picks": 746,
+      "hit_rate": 0.789544235924933,
+      "hit_rate_ci_lower": 0.7602927910171238,
+      "hit_rate_ci_upper": 0.8187956808327421,
+      "over_pick_count": 330,
+      "over_hit_rate": 0.7636363636363637,
+      "over_hit_rate_ci_lower": 0.7177984594013078,
+      "over_hit_rate_ci_upper": 0.8094742678714195,
+      "under_pick_count": 416,
+      "under_hit_rate": 0.8100961538461539,
+      "under_hit_rate_ci_lower": 0.7724052466158354,
+      "under_hit_rate_ci_upper": 0.8477870610764723
+    }
+  ],
+  "topk_policy": [
+    {
+      "k": 5,
+      "num_picks": 105,
+      "hit_rate": 0.8666666666666667,
+      "hit_rate_ci_lower": 0.8016463835185745,
+      "hit_rate_ci_upper": 0.9316869498147589,
+      "over_pick_count": 35,
+      "over_hit_rate": 0.8,
+      "over_hit_rate_ci_lower": 0.6674822479481054,
+      "over_hit_rate_ci_upper": 0.9325177520518947,
+      "under_pick_count": 70,
+      "under_hit_rate": 0.9,
+      "under_hit_rate_ci_lower": 0.8297218491723808,
+      "under_hit_rate_ci_upper": 0.9702781508276193
+    },
+    {
+      "k": 10,
+      "num_picks": 210,
+      "hit_rate": 0.8761904761904762,
+      "hit_rate_ci_lower": 0.8316438585367134,
+      "hit_rate_ci_upper": 0.920737093844239,
+      "over_pick_count": 81,
+      "over_hit_rate": 0.8518518518518519,
+      "over_hit_rate_ci_lower": 0.7744884192459688,
+      "over_hit_rate_ci_upper": 0.9292152844577349,
+      "under_pick_count": 129,
+      "under_hit_rate": 0.8914728682170543,
+      "under_hit_rate_ci_lower": 0.8377973231176644,
+      "under_hit_rate_ci_upper": 0.9451484133164442
+    },
+    {
+      "k": 20,
+      "num_picks": 420,
+      "hit_rate": 0.819047619047619,
+      "hit_rate_ci_lower": 0.7822296207887258,
+      "hit_rate_ci_upper": 0.8558656173065122,
+      "over_pick_count": 172,
+      "over_hit_rate": 0.813953488372093,
+      "over_hit_rate_ci_lower": 0.7557975017923895,
+      "over_hit_rate_ci_upper": 0.8721094749517966,
+      "under_pick_count": 248,
+      "under_hit_rate": 0.8225806451612904,
+      "under_hit_rate_ci_lower": 0.7750348634930312,
+      "under_hit_rate_ci_upper": 0.8701264268295495
+    }
+  ],
+  "hypothetical_ev": {
+    "num_ev_positive_picks": 870,
+    "avg_ev": 0.2796586611499317,
+    "hit_rate": 0.6689655172413793,
+    "assumed_payout": 0.9091,
+    "note": "HYPOTHETICAL: Assumes -110 odds. Not a profitability claim."
+  }
+}

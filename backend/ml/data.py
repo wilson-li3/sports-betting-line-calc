@@ -10,6 +10,10 @@ from .config import (
     DATE_FIELD_OVERRIDE,
     MONGO_URI,
     MONGO_DB,
+    ML_LIMIT,
+    ML_QUERY_JSON,
+    ML_SORT_FIELD,
+    ML_SORT_DIR,
 )
 
 # Cache the client/db so we don't reconnect each call
@@ -51,7 +55,30 @@ def load_events_df(collection_name=None, projection=None):
 
     db = _get_db()
 
-    cursor = db[collection_name].find({}, projection)
+    # Task 2: Support query filter and sort options
+    query_filter = {}
+    if ML_QUERY_JSON:
+        import json
+        try:
+            query_filter = json.loads(ML_QUERY_JSON)
+            print(f"  Using query filter: {query_filter}")
+        except json.JSONDecodeError as e:
+            print(f"  WARNING: Invalid ML_QUERY_JSON, ignoring: {e}")
+    
+    # Build cursor with filter
+    cursor = db[collection_name].find(query_filter, projection)
+    
+    # Apply sort if specified
+    if ML_SORT_FIELD:
+        cursor = cursor.sort(ML_SORT_FIELD, ML_SORT_DIR)
+        print(f"  Using sort: {ML_SORT_FIELD} ({'ascending' if ML_SORT_DIR == 1 else 'descending'})")
+    
+    # Apply limit if specified
+    if ML_LIMIT:
+        limit_val = int(ML_LIMIT)
+        cursor = cursor.limit(limit_val)
+        print(f"  Using limit: {limit_val}")
+    
     events = list(cursor)
 
     if not events:
@@ -110,10 +137,13 @@ def load_events_df(collection_name=None, projection=None):
                 df["is_competitive"] = su.isin(["COMP_TRUE", "TRUE", "1", "YES", "CLOSE"]).astype(int)
             df = df.drop(columns=[comp_col], errors="ignore")
 
-    # Ensure game_id exists
+    # Task: Normalize GAME_ID to string with leading zeros before any date processing
     game_id_col = _find_field(df, FIELD_MAPPINGS["game_id"])
     if game_id_col:
-        df["game_id"] = df[game_id_col].astype(str)
+        # Normalize GAME_ID to string, preserving leading zeros (zfill to 10 digits)
+        df["game_id"] = df[game_id_col].astype(str).str.strip()
+        # Pad numeric GAME_IDs to 10 digits (NBA format: "0022300010")
+        df["game_id"] = df["game_id"].apply(lambda x: x.zfill(10) if x.isdigit() and len(x) < 10 else x)
     else:
         print("  WARNING: GAME_ID not found, creating synthetic IDs")
         df["game_id"] = df.index.astype(str)
@@ -130,46 +160,83 @@ def load_events_df(collection_name=None, projection=None):
             print("  WARNING: TEAM_ID not found, using UNKNOWN_TEAM")
             df["team_id"] = "UNKNOWN_TEAM"
 
-    # Parse date field - Task 1: Fix date handling
+    # Parse date field - Task 1: Prefer GAME_DATE over other date fields
     # A) Debug print: list date-like columns
     date_like_cols = [col for col in df.columns if "DATE" in col.upper() or "TIME" in col.upper()]
     if date_like_cols:
         print(f"  Date-like columns found: {date_like_cols}")
     
+    # Task: Prefer GAME_DATE if present, but do NOT drop rows
     date_col = DATE_FIELD_OVERRIDE
     if date_col is None:
-        date_col = _find_field(df, FIELD_MAPPINGS["date"])
+        # First try GAME_DATE (preferred field)
+        if "GAME_DATE" in df.columns:
+            date_col = "GAME_DATE"
+        else:
+            # Fall back to other date mappings
+            date_col = _find_field(df, FIELD_MAPPINGS["date"])
 
     if date_col and date_col in df.columns:
-        # B) Real date column exists - parse it
+        # Parse GAME_DATE (use NaT for missing values, do NOT drop rows)
         df["date"] = pd.to_datetime(df[date_col], errors="coerce")
-        invalid_dates = df["date"].isna().sum()
-        if invalid_dates > 0:
-            print(f"  WARNING: {invalid_dates} rows with invalid dates dropped")
-            df = df.dropna(subset=["date"])
+        
+        # Task: Add has_real_date boolean column
+        df["has_real_date"] = df["date"].notna().astype(int)
+        
+        valid_dates = df["has_real_date"].sum()
+        invalid_dates = len(df) - valid_dates
+        total_rows = len(df)
+        
+        # Task: Update logging - print coverage and missing count, NO "dropping rows"
+        coverage_pct = (valid_dates / total_rows * 100) if total_rows > 0 else 0
         print(f"  Using date column: {date_col}")
+        print(f"  GAME_DATE coverage: {valid_dates}/{total_rows} ({coverage_pct:.1f}%)")
+        if invalid_dates > 0:
+            print(f"  Rows missing GAME_DATE: {invalid_dates} (kept with NaT for sorting)")
     else:
-        # C) No real date column - use GAME_ID as deterministic fallback for sorting
-        print("  WARNING: No real date field found, using GAME_ID for deterministic sorting")
-        if "game_id" in df.columns:
-            # Create a deterministic date from GAME_ID for sorting
-            # Convert GAME_ID to string, hash it, and use as days offset for deterministic ordering
-            game_ids_str = df["game_id"].astype(str)
-            # Use a simple hash-like approach: sum of character codes mod reasonable number
-            # This gives deterministic ordering based on GAME_ID without requiring dates
-            df["_sort_key"] = game_ids_str.apply(lambda x: sum(ord(c) for c in x) % 100000)
-            df["date"] = pd.to_datetime("1970-01-01") + pd.to_timedelta(df["_sort_key"], unit="D")
-            df = df.drop(columns=["_sort_key"])
-        else:
-            # Last resort: use index
-            df["date"] = pd.to_datetime("1970-01-01") + pd.to_timedelta(df.index, unit="D")
-        print("  Using deterministic sorting by GAME_ID (no real dates available)")
+        # No real date column found - all rows have no real date
+        print("  WARNING: No real date field found (GAME_DATE or other)")
+        df["date"] = pd.NaT
+        df["has_real_date"] = 0
+        print(f"  All {len(df)} rows missing GAME_DATE (using GAME_ID-based sorting)")
 
-    # Sort by date ascending (important for leakage-safe features)
-    df = df.sort_values("date").reset_index(drop=True)
+    # Task: Ensure GAME_ID and TEAM_ID exist for sorting
+    if "team_id" not in df.columns:
+        if "TEAM_ID" in df.columns:
+            df["team_id"] = df["TEAM_ID"].astype(str)
+        else:
+            df["team_id"] = "UNKNOWN"
+            print("  WARNING: No TEAM_ID field found, using 'UNKNOWN' for sorting")
+
+    # Task: Sort by [has_real_date desc, GAME_DATE asc, GAME_ID asc, TEAM_ID asc]
+    # This ensures rows with real dates come first, then sorted by GAME_DATE, then by GAME_ID for stable ordering
+    sort_cols = []
+    if "has_real_date" in df.columns:
+        sort_cols.append("has_real_date")
+    if "date" in df.columns:
+        sort_cols.append("date")
+    if "game_id" in df.columns:
+        sort_cols.append("game_id")
+    if "team_id" in df.columns:
+        sort_cols.append("team_id")
+    
+    if sort_cols:
+        # has_real_date: descending (1s first), others: ascending
+        ascending = [False if col == "has_real_date" else True for col in sort_cols]
+        df = df.sort_values(sort_cols, ascending=ascending, na_position="last").reset_index(drop=True)
 
     print(f"  Final DataFrame shape: {df.shape}")
-    print(f"  Date range: {df['date'].min()} to {df['date'].max()}")
+    
+    # Task: Print date range only if we have real dates
+    if "has_real_date" in df.columns and df["has_real_date"].sum() > 0:
+        # Only look at rows with real dates for date range
+        real_dates = df[df["has_real_date"] == 1]["date"]
+        if len(real_dates) > 0:
+            min_date = real_dates.min()
+            max_date = real_dates.max()
+            print(f"  Date range (rows with GAME_DATE): {min_date} to {max_date}")
+    elif "date" in df.columns and df["date"].notna().sum() == 0:
+        print(f"  Date ordering: GAME_ID-based (no real dates available)")
 
     return df
 
