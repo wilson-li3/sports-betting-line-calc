@@ -5,7 +5,11 @@ COLLECTIONS = [
     "player_game_stats",
     "team_game_stats",
     "roles_by_game",
+    "events",
     "pair_stats",
+    "event_probs",
+    "graph_nodes",
+    "graph_edges",
 ]
 
 def init_db():

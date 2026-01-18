@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import db
+from app.analytics.ev_utils import american_to_implied_prob, compute_ev, compute_joint_ev
 import math
-from typing import Literal
+from typing import Literal, Optional
 
 # Create FastAPI app instance
 app = FastAPI()
@@ -336,4 +337,167 @@ def get_recommendations(
     return {
         "stacks": stacks,
         "hedges": hedges,
+    }
+
+
+@app.get("/graph")
+def get_graph(
+    min_support: int = Query(200, ge=1, description="Minimum support for edges"),
+    max_nodes: int = Query(200, ge=1, le=1000, description="Maximum number of nodes"),
+    families: str = Query("association,context,value", description="Comma-separated list of edge families")
+):
+    """
+    GET endpoint that returns graph nodes and edges for visualization.
+    """
+    # Parse families
+    family_list = [f.strip() for f in families.split(",")]
+    
+    # Get nodes
+    nodes_cursor = db.graph_nodes.find({}).sort("support", -1).limit(max_nodes)
+    node_ids = set()
+    nodes_list = []
+    for doc in nodes_cursor:
+        node_id = doc.get("node_id")
+        if node_id:
+            node_ids.add(node_id)
+            nodes_list.append({
+                "id": node_id,
+                "type": doc.get("type", "event"),
+                "description": doc.get("description", node_id),
+                "support": doc.get("support", 0),
+            })
+    
+    # Get edges (only between nodes we're returning)
+    edges_cursor = db.graph_edges.find({
+        "family": {"$in": family_list},
+        "support": {"$gte": min_support},
+        "source": {"$in": node_ids},
+        "target": {"$in": node_ids},
+    }).sort("weight", -1)
+    
+    edges_list = []
+    for doc in edges_cursor:
+        edges_list.append({
+            "source": doc.get("source"),
+            "target": doc.get("target"),
+            "family": doc.get("family"),
+            "weight": doc.get("weight", 0.0),
+            "metrics": doc.get("metrics", {}),
+            "support": doc.get("support", 0),
+            "explain": doc.get("explain", ""),
+            "classification": doc.get("classification"),
+        })
+    
+    # Limit edges to top by weight
+    edges_list.sort(key=lambda x: abs(x["weight"]), reverse=True)
+    edges_list = edges_list[:max_nodes * 2]  # Rough limit: 2 edges per node
+    
+    return {
+        "nodes": nodes_list,
+        "links": edges_list,
+        "meta": {
+            "min_support": min_support,
+            "max_nodes": max_nodes,
+            "families": family_list,
+            "node_count": len(nodes_list),
+            "link_count": len(edges_list),
+        },
+    }
+
+
+@app.get("/recommendations/ev")
+def get_recommendations_ev(
+    min_n: int = Query(100, ge=1, description="Minimum sample size"),
+    limit: int = Query(25, ge=1, le=100, description="Maximum number of recommendations"),
+    odds: int = Query(-110, description="American odds (default -110)"),
+    parlay_odds: Optional[int] = Query(None, description="Parlay odds (optional)")
+):
+    """
+    GET endpoint that returns EV-ranked recommendations.
+    Does NOT output betting picks - only probabilistic insights and EV estimates.
+    """
+    pairs_cursor = db.pair_stats.find({})
+    
+    candidates = []
+    
+    for doc in pairs_cursor:
+        n = doc.get("n", 0)
+        if n < min_n:
+            continue
+        
+        pA = doc.get("pA", 0.0)
+        pB = doc.get("pB", 0.0)
+        pAB = doc.get("pAB", 0.0)
+        lift = doc.get("lift", 0.0)
+        phi = doc.get("phi", 0.0)
+        
+        # Get probabilities with CI from event_probs
+        eventA = db.event_probs.find_one({"event": doc.get("A")})
+        eventB = db.event_probs.find_one({"event": doc.get("B")})
+        
+        pA_mean = eventA.get("p_mean") if eventA else pA
+        pA_lo = eventA.get("p_lo") if eventA else pA * 0.9
+        pA_hi = eventA.get("p_hi") if eventA else pA * 1.1
+        
+        pB_mean = eventB.get("p_mean") if eventB else pB
+        pB_lo = eventB.get("p_lo") if eventB else pB * 0.9
+        pB_hi = eventB.get("p_hi") if eventB else pB * 1.1
+        
+        # Joint probability
+        pAB_mean = doc.get("pAB", pA_mean * pB_mean)
+        pAB_lo = doc.get("pBA_lo", pA_lo * pB_lo)  # Approximate
+        pAB_hi = doc.get("pBA_hi", pA_hi * pB_hi)  # Approximate
+        
+        # Compute EV for single events
+        evA = compute_ev(pA_mean, pA_lo, pA_hi, odds)
+        evB = compute_ev(pB_mean, pB_lo, pB_hi, odds)
+        
+        # Compute joint EV if parlay odds provided
+        joint_ev = None
+        if parlay_odds is not None:
+            joint_ev = compute_joint_ev(
+                pA_mean, pA_lo, pA_hi,
+                pB_mean, pB_lo, pB_hi,
+                pAB_mean, pAB_lo, pAB_hi,
+                parlay_odds
+            )
+        
+        # Reasoning
+        reasoning = f"Event A: P={pA_mean:.3f} [{pA_lo:.3f}, {pA_hi:.3f}], EV={evA['ev_mean']:.2f} [{evA['ev_lo']:.2f}, {evA['ev_hi']:.2f}]. "
+        reasoning += f"Event B: P={pB_mean:.3f} [{pB_lo:.3f}, {pB_hi:.3f}], EV={evB['ev_mean']:.2f} [{evB['ev_lo']:.2f}, {evB['ev_hi']:.2f}]. "
+        if joint_ev:
+            reasoning += f"Joint: P={joint_ev['joint_p_mean']:.3f} [{joint_ev['joint_p_lo']:.3f}, {joint_ev['joint_p_hi']:.3f}], EV={joint_ev['ev_mean']:.2f} [{joint_ev['ev_lo']:.2f}, {joint_ev['ev_hi']:.2f}]."
+        
+        # Score: use max EV (single or joint)
+        if joint_ev:
+            score = max(evA["ev_mean"], evB["ev_mean"], joint_ev["ev_mean"])
+        else:
+            score = max(evA["ev_mean"], evB["ev_mean"])
+        
+        candidates.append({
+            "A": doc.get("A"),
+            "B": doc.get("B"),
+            "n": n,
+            "lift": lift,
+            "phi": phi,
+            "evA": evA,
+            "evB": evB,
+            "joint_ev": joint_ev,
+            "score": score,
+            "reasoning": reasoning,
+        })
+    
+    # Sort by score descending
+    candidates.sort(key=lambda x: x["score"], reverse=True)
+    candidates = candidates[:limit]
+    
+    return {
+        "candidates": candidates,
+        "meta": {
+            "min_n": min_n,
+            "limit": limit,
+            "odds": odds,
+            "parlay_odds": parlay_odds,
+            "count": len(candidates),
+        },
     }
