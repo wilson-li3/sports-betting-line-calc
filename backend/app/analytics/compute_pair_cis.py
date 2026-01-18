@@ -10,8 +10,8 @@ For each pair (A,B):
 """
 
 from app.db import db
-from app.analytics.compute_pairs import PAIR_FIELDS, phi_correlation
-from app.analytics.estimate_event_probs import beta_quantiles
+from app.analytics.compute_pairs import phi_correlation
+from app.analytics.estimate_event_probs import beta_quantiles, discover_event_fields
 import math
 import random
 import argparse
@@ -185,30 +185,84 @@ def compute_confidence(phi: float, n: int) -> float:
     return abs(phi) * math.log10(n)
 
 
-def compute_pair_cis(n_bootstrap: int = 500, seed: int = None):
+def discover_event_pairs(min_n: int = 200):
     """
-    Compute pair statistics with confidence intervals for all pairs.
+    Dynamically discover all event pairs from discovered event fields.
+    Prunes pairs with insufficient support before heavy computation.
+    
+    Returns:
+        list of (A, B) tuples
+    """
+    events = list(db.events.find({}))
+    if not events:
+        return []
+    
+    # Discover all event fields
+    event_fields = discover_event_fields()
+    print(f"Discovered {len(event_fields)} event fields")
+    
+    # Quick pass: count support for each event field
+    field_counts = {}
+    for event_field in event_fields:
+        count = sum(1 for e in events if e.get(event_field) is not None)
+        field_counts[event_field] = count
+    
+    # Generate pairs and filter by min_n before computation
+    pairs = []
+    for i, A in enumerate(event_fields):
+        # Skip if A has insufficient support
+        if field_counts[A] < min_n:
+            continue
+        
+        for B in event_fields[i+1:]:
+            # Skip if B has insufficient support
+            if field_counts[B] < min_n:
+                continue
+            
+            # Check joint support (quick pass)
+            joint_support = 0
+            for e in events:
+                if e.get(A) is not None and e.get(B) is not None:
+                    joint_support += 1
+                    if joint_support >= min_n:
+                        break
+            
+            # Only include if joint support >= min_n
+            if joint_support >= min_n:
+                pairs.append((A, B))
+    
+    return pairs
+
+
+def compute_pair_cis(n_bootstrap: int = 500, seed: int = None, min_n: int = 200):
+    """
+    Compute pair statistics with confidence intervals for all discovered pairs.
+    
+    Dynamically generates pairs from all event fields and prunes by min_n.
     
     Updates existing pair_stats documents or creates new ones.
     """
-    events = list(db.events.find())
+    events = list(db.events.find({}))
     if not events:
         print("No events found.")
         return
     
-    print(f"Computing pair CIs for {len(PAIR_FIELDS)} pairs...")
+    # Discover all qualifying pairs (pruned by min_n)
+    pairs = discover_event_pairs(min_n=min_n)
+    print(f"Computing pair CIs for {len(pairs)} pairs (min_n={min_n})...")
     print(f"Bootstrap samples: {n_bootstrap}")
     if seed is not None:
         print(f"Random seed: {seed}")
     
     results = []
     
-    for A, B in PAIR_FIELDS:
-        print(f"Processing {A} ↔ {B}...")
+    for idx, (A, B) in enumerate(pairs, 1):
+        if idx % 50 == 0:
+            print(f"Processing {idx}/{len(pairs)}: {A} ↔ {B}...")
         
         # Compute base stats
         base_stats = compute_pair_base_stats(events, A, B)
-        if base_stats is None or base_stats["n"] < 5:
+        if base_stats is None or base_stats["n"] < min_n:
             print(f"  Skipped: insufficient data (n={base_stats['n'] if base_stats else 0})")
             continue
         
@@ -266,6 +320,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute pair statistics with confidence intervals")
     parser.add_argument("--boot", type=int, default=500, help="Number of bootstrap samples (default: 500)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
+    parser.add_argument("--min-n", type=int, default=200, help="Minimum sample size for pairs (default: 200)")
     
     args = parser.parse_args()
-    compute_pair_cis(n_bootstrap=args.boot, seed=args.seed)
+    compute_pair_cis(n_bootstrap=args.boot, seed=args.seed, min_n=args.min_n)

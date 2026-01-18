@@ -8,22 +8,41 @@ For each event field in the events collection, computes:
 - p_lo, p_hi: 2.5% and 97.5% quantiles of Beta posterior
 
 Uses Monte Carlo sampling (random.betavariate) for quantile estimation.
+
+Dynamically discovers all event fields ending in _OVER_HIT or _STRONG_HIT.
 """
 
 from app.db import db
 import random
 
-# Event fields to analyze (boolean fields in events collection)
-EVENT_FIELDS = [
-    "TEAM_TOTAL_OVER_HIT",
-    "GAME_TOTAL_OVER_HIT",
-    "PRIMARY_SCORER_PTS_OVER_HIT",
-    "PRIMARY_FACILITATOR_AST_OVER_HIT",
-    "PRIMARY_REBOUNDER_REB_OVER_HIT",
-]
-
 # Number of Monte Carlo samples for quantile estimation
 MC_SAMPLES = 50000
+
+
+def discover_event_fields():
+    """
+    Dynamically discover all event fields ending in _OVER_HIT or _STRONG_HIT.
+    Excludes fields ending in _LINE, _ACTUAL, _MARGIN.
+    """
+    # Sample a few events to discover field names
+    sample_events = list(db.events.find({}).limit(10))
+    if not sample_events:
+        return []
+    
+    # Extract all field names from sample events
+    all_fields = set()
+    for event in sample_events:
+        for key in event.keys():
+            # Skip MongoDB _id and non-event fields
+            if key in ["_id", "GAME_ID", "TEAM_ID", "TEAM_ABBREVIATION", "context"]:
+                continue
+            
+            # Include fields ending in _OVER_HIT or _STRONG_HIT
+            if key.endswith("_OVER_HIT") or key.endswith("_STRONG_HIT"):
+                # Exclude fields ending in _LINE, _ACTUAL, _MARGIN (already excluded by suffix check)
+                all_fields.add(key)
+    
+    return sorted(list(all_fields))
 
 
 def beta_quantiles(alpha: float, beta: float, mc_samples: int = MC_SAMPLES):
@@ -92,18 +111,28 @@ def estimate_event_prob(event_field: str):
 def estimate_all_event_probs():
     """
     Estimate probabilities for all event fields and store in event_probs collection.
+    Dynamically discovers event fields from the events collection.
     """
+    print("Discovering event fields...")
+    event_fields = discover_event_fields()
+    print(f"Found {len(event_fields)} event fields to analyze")
+    
+    if not event_fields:
+        print("No event fields found. Make sure events collection has data.")
+        return 0
+    
     print("Estimating event probabilities...")
-    print(f"Event fields: {', '.join(EVENT_FIELDS)}")
     
     # Delete existing event_probs (idempotent: rebuild collection)
     db.event_probs.delete_many({})
     
     results = []
-    for event_field in EVENT_FIELDS:
+    for i, event_field in enumerate(event_fields, 1):
         result = estimate_event_prob(event_field)
         if result:
             results.append(result)
+            if i % 10 == 0:
+                print(f"  Processed {i}/{len(event_fields)} events...")
     
     if results:
         db.event_probs.insert_many(results)

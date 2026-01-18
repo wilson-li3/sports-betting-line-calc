@@ -20,7 +20,11 @@ type PairStat = {
   pBA_hi?: number;
 };
 
-type GraphNode = { id: string };
+type GraphNode = { 
+  id: string;
+  x?: number; // Added by react-force-graph-2d during simulation
+  y?: number; // Added by react-force-graph-2d during simulation
+};
 type GraphLink = {
   source: string;
   target: string;

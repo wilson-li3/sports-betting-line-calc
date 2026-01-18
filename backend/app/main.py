@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import db
 from app.analytics.ev_utils import american_to_implied_prob, compute_ev, compute_joint_ev
@@ -344,65 +344,80 @@ def get_recommendations(
 def get_graph(
     min_support: int = Query(200, ge=1, description="Minimum support for edges"),
     max_nodes: int = Query(200, ge=1, le=1000, description="Maximum number of nodes"),
+    max_edges: int = Query(1500, ge=1, le=10000, description="Maximum number of edges"),
     families: str = Query("association,context,value", description="Comma-separated list of edge families")
 ):
     """
     GET endpoint that returns graph nodes and edges for visualization.
     """
-    # Parse families
-    family_list = [f.strip() for f in families.split(",")]
-    
-    # Get nodes
-    nodes_cursor = db.graph_nodes.find({}).sort("support", -1).limit(max_nodes)
-    node_ids = set()
-    nodes_list = []
-    for doc in nodes_cursor:
-        node_id = doc.get("node_id")
-        if node_id:
-            node_ids.add(node_id)
-            nodes_list.append({
-                "id": node_id,
-                "type": doc.get("type", "event"),
-                "description": doc.get("description", node_id),
+    try:
+        # Parse families
+        family_list = [f.strip() for f in families.split(",")]
+        
+        # Get nodes (exclude _id)
+        nodes_cursor = db.graph_nodes.find({}, {"_id": 0}).sort("support", -1).limit(max_nodes)
+        node_ids = set()
+        nodes_list = []
+        for doc in nodes_cursor:
+            node_id = doc.get("node_id")
+            if node_id:
+                node_ids.add(node_id)
+                nodes_list.append({
+                    "id": node_id,
+                    "type": doc.get("type", "event"),
+                    "description": doc.get("description", node_id),
+                    "support": doc.get("support", 0),
+                })
+        
+        # Get edges (only between nodes we're returning, exclude _id)
+        # Convert node_ids set to list for MongoDB $in query (sets are not JSON-serializable)
+        node_ids_list = list(node_ids)
+        edges_cursor = db.graph_edges.find({
+            "family": {"$in": family_list},
+            "support": {"$gte": min_support},
+            "source": {"$in": node_ids_list},
+            "target": {"$in": node_ids_list},
+        }, {"_id": 0}).sort("weight", -1).limit(max_edges)
+        
+        edges_list = []
+        for doc in edges_cursor:
+            # Convert metrics dict, ensuring no sets (sets are not JSON-serializable)
+            metrics = doc.get("metrics", {})
+            if isinstance(metrics, dict):
+                metrics_clean = {}
+                for k, v in metrics.items():
+                    if isinstance(v, set):
+                        metrics_clean[k] = list(v)
+                    else:
+                        metrics_clean[k] = v
+                metrics = metrics_clean
+            
+            edges_list.append({
+                "source": doc.get("source"),
+                "target": doc.get("target"),
+                "family": doc.get("family"),
+                "weight": doc.get("weight", 0.0),
+                "metrics": metrics,
                 "support": doc.get("support", 0),
+                "explain": doc.get("explain", ""),
+                "classification": doc.get("classification"),
             })
-    
-    # Get edges (only between nodes we're returning)
-    edges_cursor = db.graph_edges.find({
-        "family": {"$in": family_list},
-        "support": {"$gte": min_support},
-        "source": {"$in": node_ids},
-        "target": {"$in": node_ids},
-    }).sort("weight", -1)
-    
-    edges_list = []
-    for doc in edges_cursor:
-        edges_list.append({
-            "source": doc.get("source"),
-            "target": doc.get("target"),
-            "family": doc.get("family"),
-            "weight": doc.get("weight", 0.0),
-            "metrics": doc.get("metrics", {}),
-            "support": doc.get("support", 0),
-            "explain": doc.get("explain", ""),
-            "classification": doc.get("classification"),
-        })
-    
-    # Limit edges to top by weight
-    edges_list.sort(key=lambda x: abs(x["weight"]), reverse=True)
-    edges_list = edges_list[:max_nodes * 2]  # Rough limit: 2 edges per node
-    
-    return {
-        "nodes": nodes_list,
-        "links": edges_list,
-        "meta": {
-            "min_support": min_support,
-            "max_nodes": max_nodes,
-            "families": family_list,
-            "node_count": len(nodes_list),
-            "link_count": len(edges_list),
-        },
-    }
+        
+        return {
+            "nodes": nodes_list,
+            "links": edges_list,
+            "meta": {
+                "min_support": min_support,
+                "max_nodes": max_nodes,
+                "max_edges": max_edges,
+                "families": family_list,
+                "node_count": len(nodes_list),
+                "link_count": len(edges_list),
+            },
+        }
+    except Exception as e:
+        print("GRAPH ERROR:", repr(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/recommendations/ev")

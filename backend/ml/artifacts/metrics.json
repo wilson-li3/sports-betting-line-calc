@@ -1,0 +1,254 @@
+{
+  "accuracy": 0.6062176165803109,
+  "log_loss": 0.7271769680468203,
+  "roc_auc": 0.6473481863552786,
+  "threshold": 0.5,
+  "n_samples": 579,
+  "n_folds": 6,
+  "baseline_05": {
+    "accuracy": 0.48704663212435234,
+    "log_loss": 0.6931471805599453,
+    "roc_auc": 0.5,
+    "threshold": 0.5,
+    "n_samples": 579
+  },
+  "baseline_line_only": {
+    "accuracy": 0.6062176165803109,
+    "log_loss": 0.6534100820604712,
+    "roc_auc": 0.6541299520022924,
+    "threshold": 0.5,
+    "n_samples": 579
+  },
+  "calibrated_sigmoid": {
+    "accuracy": 0.6096718480138169,
+    "log_loss": 0.6676342485651079,
+    "roc_auc": 0.6306325668027796,
+    "threshold": 0.5,
+    "n_samples": 579
+  },
+  "calibrated_isotonic": {
+    "accuracy": 0.616580310880829,
+    "log_loss": 1.4020179706041729,
+    "roc_auc": 0.6411992263056093,
+    "threshold": 0.5,
+    "n_samples": 579
+  },
+  "calibration_sigmoid": [
+    {
+      "bin": 3,
+      "bin_low": 0.2,
+      "bin_high": 0.30000000000000004,
+      "count": 14,
+      "mean_pred": 0.27897022395584636,
+      "mean_true": 0.2857142857142857,
+      "diff": -0.006744061758439335
+    },
+    {
+      "bin": 4,
+      "bin_low": 0.30000000000000004,
+      "bin_high": 0.4,
+      "count": 124,
+      "mean_pred": 0.3570788588370407,
+      "mean_true": 0.3467741935483871,
+      "diff": 0.010304665288653592
+    },
+    {
+      "bin": 5,
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "count": 147,
+      "mean_pred": 0.45093039239977023,
+      "mean_true": 0.40816326530612246,
+      "diff": 0.04276712709364777
+    },
+    {
+      "bin": 6,
+      "bin_low": 0.5,
+      "bin_high": 0.6000000000000001,
+      "count": 152,
+      "mean_pred": 0.5509963696890214,
+      "mean_true": 0.5723684210526315,
+      "diff": -0.02137205136361009
+    },
+    {
+      "bin": 7,
+      "bin_low": 0.6000000000000001,
+      "bin_high": 0.7000000000000001,
+      "count": 131,
+      "mean_pred": 0.6458306309350998,
+      "mean_true": 0.6106870229007634,
+      "diff": 0.03514360803433647
+    },
+    {
+      "bin": 8,
+      "bin_low": 0.7000000000000001,
+      "bin_high": 0.8,
+      "count": 11,
+      "mean_pred": 0.7140966886862937,
+      "mean_true": 0.7272727272727273,
+      "diff": -0.01317603858643357
+    }
+  ],
+  "calibration_isotonic": [
+    {
+      "bin": 1,
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "count": 33,
+      "mean_pred": 0.006884309696231609,
+      "mean_true": 0.24242424242424243,
+      "diff": -0.23553993272801083
+    },
+    {
+      "bin": 2,
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "count": 25,
+      "mean_pred": 0.1656397790515887,
+      "mean_true": 0.36,
+      "diff": -0.1943602209484113
+    },
+    {
+      "bin": 3,
+      "bin_low": 0.2,
+      "bin_high": 0.30000000000000004,
+      "count": 38,
+      "mean_pred": 0.2855263157894737,
+      "mean_true": 0.3684210526315789,
+      "diff": -0.08289473684210524
+    },
+    {
+      "bin": 4,
+      "bin_low": 0.30000000000000004,
+      "bin_high": 0.4,
+      "count": 55,
+      "mean_pred": 0.3529514129803968,
+      "mean_true": 0.36363636363636365,
+      "diff": -0.010684950655966863
+    },
+    {
+      "bin": 5,
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "count": 192,
+      "mean_pred": 0.45819497810311205,
+      "mean_true": 0.4427083333333333,
+      "diff": 0.015486644769778735
+    },
+    {
+      "bin": 6,
+      "bin_low": 0.5,
+      "bin_high": 0.6000000000000001,
+      "count": 47,
+      "mean_pred": 0.558120020375588,
+      "mean_true": 0.6170212765957447,
+      "diff": -0.05890125622015663
+    },
+    {
+      "bin": 7,
+      "bin_low": 0.6000000000000001,
+      "bin_high": 0.7000000000000001,
+      "count": 115,
+      "mean_pred": 0.6661766427552063,
+      "mean_true": 0.5826086956521739,
+      "diff": 0.08356794710303239
+    },
+    {
+      "bin": 8,
+      "bin_low": 0.7000000000000001,
+      "bin_high": 0.8,
+      "count": 37,
+      "mean_pred": 0.7819113466084939,
+      "mean_true": 0.6486486486486487,
+      "diff": 0.13326269795984524
+    },
+    {
+      "bin": 9,
+      "bin_low": 0.8,
+      "bin_high": 0.9,
+      "count": 13,
+      "mean_pred": 0.8580742711563745,
+      "mean_true": 0.6153846153846154,
+      "diff": 0.24268965577175905
+    },
+    {
+      "bin": 10,
+      "bin_low": 0.9,
+      "bin_high": 1.0,
+      "count": 24,
+      "mean_pred": 1.0,
+      "mean_true": 0.75,
+      "diff": 0.25
+    }
+  ],
+  "selected_model": "sigmoid",
+  "selected_model_metrics": {
+    "accuracy": 0.6096718480138169,
+    "log_loss": 0.6676342485651079,
+    "roc_auc": 0.6306325668027796,
+    "threshold": 0.5,
+    "n_samples": 579
+  },
+  "fold_metrics": [
+    {
+      "accuracy": 0.61,
+      "log_loss": 0.6800229600210692,
+      "roc_auc": 0.6692091529506222,
+      "threshold": 0.5,
+      "n_samples": 100,
+      "fold": 0,
+      "train_size": 400,
+      "test_size": 100
+    },
+    {
+      "accuracy": 0.59,
+      "log_loss": 0.6856311217952112,
+      "roc_auc": 0.6691297208538587,
+      "threshold": 0.5,
+      "n_samples": 100,
+      "fold": 1,
+      "train_size": 500,
+      "test_size": 100
+    },
+    {
+      "accuracy": 0.59,
+      "log_loss": 0.70648206380833,
+      "roc_auc": 0.6690705128205128,
+      "threshold": 0.5,
+      "n_samples": 100,
+      "fold": 2,
+      "train_size": 600,
+      "test_size": 100
+    },
+    {
+      "accuracy": 0.54,
+      "log_loss": 0.7899268699177224,
+      "roc_auc": 0.5787337662337663,
+      "threshold": 0.5,
+      "n_samples": 100,
+      "fold": 3,
+      "train_size": 700,
+      "test_size": 100
+    },
+    {
+      "accuracy": 0.67,
+      "log_loss": 0.7097968962295631,
+      "roc_auc": 0.6698679471788715,
+      "threshold": 0.5,
+      "n_samples": 100,
+      "fold": 4,
+      "train_size": 800,
+      "test_size": 100
+    },
+    {
+      "accuracy": 0.6455696202531646,
+      "log_loss": 0.8082211812901186,
+      "roc_auc": 0.6243351063829787,
+      "threshold": 0.5,
+      "n_samples": 79,
+      "fold": 5,
+      "train_size": 900,
+      "test_size": 79
+    }
+  ]
+}

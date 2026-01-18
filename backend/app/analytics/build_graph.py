@@ -8,37 +8,9 @@ Creates graph_nodes and graph_edges collections with:
 
 from app.db import db
 from app.analytics.compute_pairs import phi_correlation
-from app.analytics.estimate_event_probs import beta_quantiles
+from app.analytics.estimate_event_probs import beta_quantiles, discover_event_fields
 import math
 import random
-
-# Event field patterns to extract
-EVENT_PATTERNS = [
-    "TEAM_TOTAL_OVER_HIT",
-    "GAME_TOTAL_OVER_HIT",
-    "PRIMARY_SCORER_PTS_OVER_HIT",
-    "PRIMARY_SCORER_AST_OVER_HIT",
-    "PRIMARY_SCORER_REB_OVER_HIT",
-    "PRIMARY_SCORER_PRA_OVER_HIT",
-    "PRIMARY_SCORER_FG3M_OVER_HIT",
-    "PRIMARY_FACILITATOR_AST_OVER_HIT",
-    "PRIMARY_FACILITATOR_REB_OVER_HIT",
-    "PRIMARY_FACILITATOR_PRA_OVER_HIT",
-    "PRIMARY_REBOUNDER_REB_OVER_HIT",
-    "PRIMARY_REBOUNDER_PTS_OVER_HIT",
-    "PRIMARY_REBOUNDER_PRA_OVER_HIT",
-]
-
-MARGIN_PATTERNS = [
-    "TEAM_TOTAL_MARGIN",
-    "GAME_TOTAL_MARGIN",
-    "PRIMARY_SCORER_PTS_MARGIN",
-    "PRIMARY_SCORER_AST_MARGIN",
-    "PRIMARY_SCORER_REB_MARGIN",
-    "PRIMARY_SCORER_PRA_MARGIN",
-    "PRIMARY_FACILITATOR_AST_MARGIN",
-    "PRIMARY_REBOUNDER_REB_MARGIN",
-]
 
 def to_num(x):
     try:
@@ -57,6 +29,7 @@ def compute_confidence(phi: float, n: int) -> float:
 def build_graph_nodes():
     """
     Build graph nodes from event fields and context tags.
+    Dynamically discovers all event fields from event_probs.
     """
     print("Building graph nodes...")
     
@@ -71,26 +44,35 @@ def build_graph_nodes():
     nodes = []
     node_ids = set()
     
-    # Extract event field nodes
+    # Get all event fields from event_probs (dynamically discovered)
+    event_probs = list(db.event_probs.find({}))
+    event_field_map = {doc["event"]: doc for doc in event_probs}
+    
+    # If event_probs is empty, fall back to discovering from events
+    if not event_field_map:
+        discovered_fields = discover_event_fields()
+        print(f"Discovered {len(discovered_fields)} event fields from events collection")
+        for event_field in discovered_fields:
+            event_field_map[event_field] = None
+    
+    # Create nodes for all discovered event fields
+    for event_field in event_field_map.keys():
+        node_id = event_field
+        if node_id not in node_ids:
+            prob_doc = event_field_map.get(event_field)
+            nodes.append({
+                "node_id": node_id,
+                "type": "event",
+                "description": event_field.replace("_", " ").title(),
+                "p_mean": prob_doc.get("p_mean") if prob_doc else None,
+                "p_lo": prob_doc.get("p_lo") if prob_doc else None,
+                "p_hi": prob_doc.get("p_hi") if prob_doc else None,
+                "support": prob_doc.get("n") if prob_doc else 0,
+            })
+            node_ids.add(node_id)
+    
+    # Extract context nodes from events
     for event in events:
-        for pattern in EVENT_PATTERNS:
-            if pattern in event and event.get(pattern) is not None:
-                node_id = pattern
-                if node_id not in node_ids:
-                    # Get probability from event_probs if available
-                    prob_doc = db.event_probs.find_one({"event": pattern})
-                    nodes.append({
-                        "node_id": node_id,
-                        "type": "event",
-                        "description": pattern.replace("_", " ").title(),
-                        "p_mean": prob_doc.get("p_mean") if prob_doc else None,
-                        "p_lo": prob_doc.get("p_lo") if prob_doc else None,
-                        "p_hi": prob_doc.get("p_hi") if prob_doc else None,
-                        "support": prob_doc.get("n") if prob_doc else 0,
-                    })
-                    node_ids.add(node_id)
-        
-        # Extract context nodes
         context = event.get("context", {})
         for key, value in context.items():
             if value is not None:
@@ -254,7 +236,11 @@ def build_association_edges(min_support: int = 200):
     
     edges = []
     pairs_checked = set()
+    total_pairs = len(event_nodes) * (len(event_nodes) - 1) // 2
     
+    print(f"  Computing {total_pairs} potential pairs...")
+    
+    processed = 0
     for i, A in enumerate(event_nodes):
         for B in event_nodes[i+1:]:
             pair_key = tuple(sorted([A, B]))
@@ -262,7 +248,11 @@ def build_association_edges(min_support: int = 200):
                 continue
             pairs_checked.add(pair_key)
             
-            stats = compute_pair_stats_with_ci(events, A, B)
+            processed += 1
+            if processed % 100 == 0:
+                print(f"  Processed {processed}/{total_pairs} pairs...")
+            
+            stats = compute_pair_stats_with_ci(events, A, B, n_bootstrap=200)
             if stats is None or stats["n"] < min_support:
                 continue
             
@@ -386,9 +376,27 @@ def build_context_edges(min_support: int = 200):
     return edges
 
 
+def discover_margin_fields():
+    """
+    Dynamically discover all margin fields (ending in _MARGIN).
+    """
+    sample_events = list(db.events.find({}).limit(10))
+    if not sample_events:
+        return []
+    
+    margin_fields = set()
+    for event in sample_events:
+        for key in event.keys():
+            if key.endswith("_MARGIN"):
+                margin_fields.add(key)
+    
+    return sorted(list(margin_fields))
+
+
 def build_value_edges(min_support: int = 200):
     """
     Build value edges from margins (EV proxy).
+    Dynamically discovers all margin fields.
     """
     print("Building value edges...")
     
@@ -396,9 +404,13 @@ def build_value_edges(min_support: int = 200):
     if not events:
         return []
     
+    # Discover all margin fields dynamically
+    margin_patterns = discover_margin_fields()
+    print(f"  Discovered {len(margin_patterns)} margin fields")
+    
     edges = []
     
-    for pattern in MARGIN_PATTERNS:
+    for pattern in margin_patterns:
         margins = [to_num(e.get(pattern)) for e in events if e.get(pattern) is not None]
         
         if len(margins) < min_support:
